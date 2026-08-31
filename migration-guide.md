@@ -3,9 +3,207 @@
 This guide documents SDK upgrades for the **Sample UI Connector**. The most recent
 migration is listed first; earlier migrations are preserved below for reference.
 
-- [🔄 Migration Guide: SDK 7.6.0-beta Upgrade](#-migration-guide-sdk-760-beta-upgrade) — **latest**
+- [🔄 Migration Guide: SDK 7.7.0-alpha Upgrade](#-migration-guide-sdk-770-alpha-upgrade) — **latest**
+- [🔄 Migration Guide: SDK 7.6.0-beta Upgrade](#-migration-guide-sdk-760-beta-upgrade)
 - [🔄 Migration Guide: SDK 7.5.0 Upgrade](#-migration-guide-sdk-750-upgrade)
 - [🔄 Migration Guide: SDK 7.2.1-beta Upgrade](#-migration-guide-sdk-721-beta-upgrade)
+
+---
+
+## 🔄 Migration Guide: SDK 7.7.0-alpha Upgrade
+
+This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exchange SDK 7.7.0-alpha**.
+
+### 📋 Overview of Changes
+
+- **SDK Version**: Upgraded to `Autodesk.DataExchange 7.7.0-alpha`
+- **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 7.7.0-alpha`
+- **Breaking Changes**: Yes — two signature changes plus one removal. `IStorage.Save()` now requires
+  the key of the entry being persisted, `IClient.DownloadCompleteExchangeAsOBJ` now takes a
+  `DataExchangeIdentifier` instead of separate exchange/collection id strings, and the
+  `ElementProperties` type is gone entirely.
+- **Build result**: 0 errors after fixes applied (`msbuild SampleConnector.sln -p:Configuration=Debug -p:Platform=x64`)
+
+### 🚀 Key Dependency Updates
+
+| Package | Previous Version | New Version | Impact |
+|---------|------------------|-------------|---------|
+| `Autodesk.DataExchange` | `7.6.0-beta` | `7.7.0-alpha` | **Minor** - breaking changes |
+| `Autodesk.DataExchange.UI` | `7.6.0-beta` | `7.7.0-alpha` | **Minor** - breaking changes |
+
+### ⚠️ Breaking Changes
+
+#### 1. `IStorage.Save()` requires the key to persist
+
+The parameterless `Save()` — which flushed every in-memory entry — is gone. The new signature is
+`Save(string key, string group = null)`, so persistence is now scoped to the entry that changed
+(and optionally its group, matching the `group` overloads of `Add`/`Get`/`Remove`).
+
+**Before (7.6.0-beta):**
+```csharp
+_sDKOptions.Storage.Add("LocalExchanges", localStorage);
+_sDKOptions.Storage.Save();
+```
+
+**After (7.7.0-alpha):**
+```csharp
+_sDKOptions.Storage.Add("LocalExchanges", localStorage);
+_sDKOptions.Storage.Save("LocalExchanges");
+```
+
+**Migration Action:** Pass to `Save` the same key that was passed to `Add`. If a code path called
+`Save()` unconditionally after a conditional `Add`, move the `Save` call next to the `Add` so the
+key is always in scope — see `SampleHostWindow.Destroy`.
+
+#### 2. `IClient.DownloadCompleteExchangeAsOBJ` takes a `DataExchangeIdentifier`
+
+The `(string exchangeId, string collectionId, ...)` overload was removed. All four
+`DownloadCompleteExchangeAs*` methods (OBJ, STEP, IFC, USD) now share one shape:
+`(DataExchangeIdentifier dataExchangeIdentifier, string path = null, CancellationToken cancellationToken = default)`.
+
+**Before (7.6.0-beta):**
+```csharp
+var objResult = this.Client.DownloadCompleteExchangeAsOBJ(
+    exchangeIdentifier.ExchangeId,
+    exchangeIdentifier.CollectionId,
+    downloadPath,
+    cancellationToken);
+```
+
+**After (7.7.0-alpha):**
+```csharp
+var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, downloadPath, cancellationToken);
+```
+
+**Migration Action:** Pass the `DataExchangeIdentifier` directly instead of destructuring it into
+`ExchangeId`/`CollectionId`.
+
+#### 3. `ElementProperties` and `AddElement(ElementProperties)` are removed
+
+Marked `[Obsolete]` in 7.6.0-beta, these are deleted outright in 7.7.0-alpha — the `ElementProperties`
+type no longer exists in the assembly, so there is no fallback if the replacement APIs give trouble.
+This sample was already migrated during the 7.6.0-beta upgrade, so no code change was needed here.
+
+**Migration Action:** Replace `AddElement(new ElementProperties(id, name, category, family, type))`
+with `AddElement(id, name)` followed by `Classify` and `DefineType`/`SetType` as described below.
+
+### ⚠️ Element types must be defined before they can be assigned
+
+Not a 7.7.0-alpha change — this behaviour is identical in 7.6.0-beta — but it is the one that most
+easily breaks a connector migrating off `ElementProperties`, so it is worth spelling out.
+
+`SetType(IElement, string name, IClassification under)` is **lookup-only**. It resolves an existing
+type by name and throws `NotFoundException("Unable to find type:<name>")` when there is no match, so
+it cannot be used on its own to give a new element a type. Creating the type is a separate call,
+`DefineType(system, name, parent, sourceId)`, which is find-or-create and returns a handle.
+
+`ElementProperties` used to build a nested `Category` -> `Family` -> `Type` hierarchy internally, so
+the replacement has to reproduce all three levels and thread each handle into the next:
+
+```csharp
+var element = dataModel.AddElement(id, name);
+
+IClassification categoryClassification = null;
+if (!string.IsNullOrEmpty(category))
+{
+    categoryClassification = dataModel.Classify(element, ClassificationSystem.Category, category);
+}
+
+IClassification familyClassification = categoryClassification;
+if (!string.IsNullOrEmpty(family))
+{
+    familyClassification = dataModel.Classify(element, ClassificationSystem.Family, family, categoryClassification);
+}
+
+if (!string.IsNullOrEmpty(type))
+{
+    dataModel.SetType(element, dataModel.DefineType("Type", type, familyClassification));
+}
+```
+
+Two things to note. Passing the parent handle to each call matters: omitting it makes `Category` and
+`Family` siblings at the root instead of a hierarchy. And the `IElementType` handle overload of
+`SetType` is preferred over the by-name overload, which throws on ambiguity if two types anywhere in
+the exchange share a name.
+
+**Migration Action:** Anywhere an element is given a type, call `DefineType` first and pass the
+returned handle to `SetType`. Keep category names consistent across call sites — two spellings of the
+same category produce two separate branches, each with its own duplicate type underneath.
+
+### 🔧 Migration Steps
+
+#### Step 1: Update Package References
+
+Update the version numbers in `src/SampleConnector.csproj` and
+`test/SampleConnectorUnitTests/SampleConnectorUnitTests.csproj`:
+
+```xml
+<PackageReference Include="Autodesk.DataExchange" Version="7.7.0-alpha" />
+<PackageReference Include="Autodesk.DataExchange.UI" Version="7.7.0-alpha" />
+```
+
+#### Step 2: Apply the Code Fixes
+
+1. **`CustomReadWriteModel.cs`** — pass `"LocalExchanges"` to `Storage.Save` in
+   `AfterUpdateExchange`; pass `exchangeIdentifier` to `DownloadCompleteExchangeAsOBJ` in
+   `DownloadExchangeGeometryAsync`.
+2. **`SampleHostWindow.xaml.cs`** — in `Destroy`, move `Storage.Save("LocalExchanges")` inside the
+   block that performs the matching `Storage.Add`.
+3. **`CreateExchangeHelper.cs`** — in `CreateElement`, define the type with `DefineType` and pass the
+   returned handle to `SetType`, threading the `Category` handle into the `Family` `Classify` call;
+   align the category in `AddVariedGeometryObjects` with the other call sites (`"Generics"`).
+4. **`CustomReadWriteModel.cs`** — in `UpdateExistingExchangeData`, mutate the loaded
+   `currentElementDataModel` instead of building an empty one with `ElementDataModel.Create(Client)`,
+   otherwise the synced model has no knowledge of the already-published elements and
+   `DeleteSampleElement` silently finds nothing to delete.
+
+#### Step 3: Restore and Rebuild
+
+**Command Line:**
+```bash
+BuildSolution.bat
+```
+
+### 🎯 Summary of Changes
+
+| Aspect | SDK 7.6.0-beta | SDK 7.7.0-alpha |
+|--------|----------------|-----------------|
+| Storage persistence | `Storage.Save()` flushes everything | `Storage.Save(key)` / `Storage.Save(key, group)` |
+| OBJ download | `DownloadCompleteExchangeAsOBJ(exchangeId, collectionId, path, token)` | `DownloadCompleteExchangeAsOBJ(dataExchangeIdentifier, path, token)` |
+| `ElementProperties` | `[Obsolete]`, still present | Removed from the assembly |
+| Element typing | `DefineType` + `SetType(handle)` (`SetType(name)` alone throws) | Unchanged |
+
+### 🧪 Testing Your Migration
+
+After upgrading, confirm:
+
+- ✅ `msbuild SampleConnector.sln -p:Configuration=Debug -p:Platform=x64` builds with 0 errors
+- ✅ The MSTest unit test suite passes (`vstest.console.exe` against `SampleConnectorUnitTests.dll`)
+- ✅ Cached exchanges still survive a connector restart (storage save/load round-trip)
+- ✅ Downloading an exchange produces both the STEP file and the OBJ output
+- ✅ Creating an exchange succeeds (no `Unable to find type:<name>` error)
+- ✅ Updating an existing exchange preserves the previously published elements and applies the
+  sample deletion
+
+---
+
+**Migration Checklist:**
+- [x] Updated all package references to 7.7.0-alpha
+- [x] Passed the storage key to `IStorage.Save`
+- [x] Passed `DataExchangeIdentifier` to `DownloadCompleteExchangeAsOBJ`
+- [x] Defined element types with `DefineType` before assigning them with `SetType`
+- [x] Reused the loaded `ElementDataModel` when updating an existing exchange
+- [x] Restored NuGet packages and rebuilt the solution (0 errors)
+- [x] Ran the MSTest unit test suite (4/4 passed)
+- [ ] Tested create / update / download workflows end to end
+
+### 📚 Additional Resources
+
+- [APS DataExchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk/v1/developers_guide/overview/)
+- [APS DataExchange Release Notes](https://aps.autodesk.com/en/docs/dx-sdk/v1/developers_guide/release_notes/)
+- [Autodesk Platform Services Developer Portal](https://aps.autodesk.com/)
+- [DataExchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk/v1/reference/)
+- [Sample Code Repository](https://github.com/autodesk-platform-services/aps-dataexchange-connector)
 
 ---
 
@@ -115,11 +313,17 @@ and `ElementDataModel.SetElementGeometry(Element, List<ElementGeometry>)` as `[O
 of `AddElement(sourceId, name, transformation, lengthUnit, displayLengthUnit)` combined with
 `Classify()`/`DefineType()`/`SetType()`, and the `IElement`/`List<IElementGeometry>` overload of
 `SetElementGeometry`. `CreateExchangeHelper.cs` has been migrated to the new model: each element is
-created via `AddElement(id, name)`, classified with `Classify(element, ClassificationSystem.Category, category)`
-and `Classify(element, ClassificationSystem.Family, family)`, and typed with `SetType(element, type)`
-(see the `CreateElement` helper). Geometry lists are now typed `List<IElementGeometry>` and passed to
-the `IElement`-based `SetElementGeometry` overload. No `#pragma warning disable CS0618` is required
-anymore in this file.
+created via `AddElement(id, name)`, classified with `Classify` for `Category` and `Family`, and typed
+with `DefineType` + `SetType` (see the `CreateElement` helper). Geometry lists are now typed
+`List<IElementGeometry>` and passed to the `IElement`-based `SetElementGeometry` overload. No
+`#pragma warning disable CS0618` is required anymore in this file.
+
+> **Note:** `SetType(element, name)` alone is not sufficient — it only resolves an already-defined
+> type and throws `NotFoundException("Unable to find type:<name>")` otherwise. The type has to be
+> created with `DefineType` first, and the `Category`/`Family` handles have to be threaded through to
+> preserve the hierarchy `ElementProperties` used to build. See
+> [Element types must be defined before they can be assigned](#-element-types-must-be-defined-before-they-can-be-assigned)
+> in the 7.7.0-alpha section for the full pattern.
 
 ### 🔧 Migration Steps
 
@@ -142,7 +346,8 @@ Update the version numbers in `src/SampleConnector.csproj` and
 2. **`CreateExchangeHelper.cs`** — change `AddUniqueStringParameter`/`AddStringParameter` to accept
    `IElement` instead of `Element`; replace `ElementProperties`/`AddElement(ElementProperties)`/
    `SetElementGeometry(Element, List<ElementGeometry>)` with `AddElement(id, name)` +
-   `Classify()`/`SetType()` + the `IElement`/`List<IElementGeometry>` overload of `SetElementGeometry`.
+   `Classify()`/`DefineType()`/`SetType()` + the `IElement`/`List<IElementGeometry>` overload of
+   `SetElementGeometry`.
 
 #### Step 3: Restore and Rebuild
 
@@ -160,7 +365,7 @@ BuildSolution.bat
 | Delta sync | `RetrieveLatestExchangeDataAsync(model)` | `RetrieveLatestExchangeAsync(model, cancellationToken)` |
 | Element identity | `IElement.Id` (ambiguous) | `IElement.SourceId` / `IElement.UniqueId` |
 | Element deletion | `DeleteElement(sourceId)` | `DeleteElementsBySourceId(sourceId)` / `DeleteElementByUniqueId(uniqueId)` |
-| Element/geometry creation | `ElementProperties` + `AddElement(ElementProperties)` + `SetElementGeometry(Element, List<ElementGeometry>)` | `AddElement(id, name)` + `Classify()`/`SetType()` + `SetElementGeometry(IElement, List<IElementGeometry>)` |
+| Element/geometry creation | `ElementProperties` + `AddElement(ElementProperties)` + `SetElementGeometry(Element, List<ElementGeometry>)` | `AddElement(id, name)` + `Classify()`/`DefineType()`/`SetType()` + `SetElementGeometry(IElement, List<IElementGeometry>)` |
 
 ### 🧪 Testing Your Migration
 

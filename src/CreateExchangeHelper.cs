@@ -81,7 +81,7 @@ namespace SampleConnector
                         dataModel,
                         $"Object-{uniquePrefix}-{i + 1}",
                         $"Object-{uniquePrefix}-{i + 1}",
-                        "Generic", "Generic", "Generic Object");
+                        "Generics", "Generic", "Generic Object");
 
                     var geometry = CreateGeometryByType(i % 4, i);
                     dataModel.SetElementGeometry(element, new List<IElementGeometry> { geometry });
@@ -111,9 +111,24 @@ namespace SampleConnector
         private static IElement CreateElement(ElementDataModel dataModel, string id, string name, string category, string family, string type)
         {
             var element = dataModel.AddElement(id, name);
-            dataModel.Classify(element, ClassificationSystem.Category, category);
-            dataModel.Classify(element, ClassificationSystem.Family, family);
-            dataModel.SetType(element, type);
+
+            IClassification categoryClassification = null;
+            if (!string.IsNullOrEmpty(category))
+            {
+                categoryClassification = dataModel.Classify(element, ClassificationSystem.Category, category);
+            }
+
+            IClassification familyClassification = categoryClassification;
+            if (!string.IsNullOrEmpty(family))
+            {
+                familyClassification = dataModel.Classify(element, ClassificationSystem.Family, family, categoryClassification);
+            }
+
+            if (!string.IsNullOrEmpty(type))
+            {
+                dataModel.SetType(element, dataModel.DefineType("Type", type, familyClassification));
+            }
+
             return element;
         }
 

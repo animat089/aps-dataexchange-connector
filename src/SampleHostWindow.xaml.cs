@@ -94,9 +94,8 @@ namespace SampleConnector
                 if (exchanges != null)
                 {
                     this.sdkOptions?.Storage.Add("LocalExchanges", exchanges);
+                    this.sdkOptions?.Storage.Save("LocalExchanges");
                 }
-
-                this.sdkOptions?.Storage.Save();
 
                 if (this.customReadWriteModel.Bridge != null)
                 {
