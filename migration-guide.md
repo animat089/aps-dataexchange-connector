@@ -3,21 +3,21 @@
 This guide documents SDK upgrades for the **Sample UI Connector**. The most recent
 migration is listed first; earlier migrations are preserved below for reference.
 
-- [🔄 Migration Guide: SDK 7.7.0-alpha Upgrade](#-migration-guide-sdk-770-alpha-upgrade) — **latest**
+- [🔄 Migration Guide: SDK 7.7.0-alpha.1 Upgrade](#-migration-guide-sdk-770-alpha1-upgrade) — **latest**
 - [🔄 Migration Guide: SDK 7.6.0-beta Upgrade](#-migration-guide-sdk-760-beta-upgrade)
 - [🔄 Migration Guide: SDK 7.5.0 Upgrade](#-migration-guide-sdk-750-upgrade)
 - [🔄 Migration Guide: SDK 7.2.1-beta Upgrade](#-migration-guide-sdk-721-beta-upgrade)
 
 ---
 
-## 🔄 Migration Guide: SDK 7.7.0-alpha Upgrade
+## 🔄 Migration Guide: SDK 7.7.0-alpha.1 Upgrade
 
-This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exchange SDK 7.7.0-alpha**.
+This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exchange SDK 7.7.0-alpha.1**.
 
 ### 📋 Overview of Changes
 
-- **SDK Version**: Upgraded to `Autodesk.DataExchange 7.7.0-alpha`
-- **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 7.7.0-alpha`
+- **SDK Version**: Upgraded to `Autodesk.DataExchange 7.7.0-alpha.1`
+- **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 7.7.0-alpha.1`
 - **Breaking Changes**: Yes — two signature changes plus one removal. `IStorage.Save()` now requires
   the key of the entry being persisted, `IClient.DownloadCompleteExchangeAsOBJ` now takes a
   `DataExchangeIdentifier` instead of separate exchange/collection id strings, and the
@@ -28,8 +28,8 @@ This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exch
 
 | Package | Previous Version | New Version | Impact |
 |---------|------------------|-------------|---------|
-| `Autodesk.DataExchange` | `7.6.0-beta` | `7.7.0-alpha` | **Minor** - breaking changes |
-| `Autodesk.DataExchange.UI` | `7.6.0-beta` | `7.7.0-alpha` | **Minor** - breaking changes |
+| `Autodesk.DataExchange` | `7.6.0-beta` | `7.7.0-alpha.1` | **Minor** - breaking changes |
+| `Autodesk.DataExchange.UI` | `7.6.0-beta` | `7.7.0-alpha.1` | **Minor** - breaking changes |
 
 ### ⚠️ Breaking Changes
 
@@ -45,7 +45,7 @@ _sDKOptions.Storage.Add("LocalExchanges", localStorage);
 _sDKOptions.Storage.Save();
 ```
 
-**After (7.7.0-alpha):**
+**After (7.7.0-alpha.1):**
 ```csharp
 _sDKOptions.Storage.Add("LocalExchanges", localStorage);
 _sDKOptions.Storage.Save("LocalExchanges");
@@ -70,7 +70,7 @@ var objResult = this.Client.DownloadCompleteExchangeAsOBJ(
     cancellationToken);
 ```
 
-**After (7.7.0-alpha):**
+**After (7.7.0-alpha.1):**
 ```csharp
 var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, downloadPath, cancellationToken);
 ```
@@ -80,7 +80,7 @@ var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, do
 
 #### 3. `ElementProperties` and `AddElement(ElementProperties)` are removed
 
-Marked `[Obsolete]` in 7.6.0-beta, these are deleted outright in 7.7.0-alpha — the `ElementProperties`
+Marked `[Obsolete]` in 7.6.0-beta, these are deleted outright in 7.7.0-alpha.1 — the `ElementProperties`
 type no longer exists in the assembly, so there is no fallback if the replacement APIs give trouble.
 This sample was already migrated during the 7.6.0-beta upgrade, so no code change was needed here.
 
@@ -89,7 +89,7 @@ with `AddElement(id, name)` followed by `Classify` and `DefineType`/`SetType` as
 
 ### ⚠️ Element types must be defined before they can be assigned
 
-Not a 7.7.0-alpha change — this behaviour is identical in 7.6.0-beta — but it is the one that most
+Not a 7.7.0-alpha.1 change — this behaviour is identical in 7.6.0-beta — but it is the one that most
 easily breaks a connector migrating off `ElementProperties`, so it is worth spelling out.
 
 `SetType(IElement, string name, IClassification under)` is **lookup-only**. It resolves an existing
@@ -138,8 +138,8 @@ Update the version numbers in `src/SampleConnector.csproj` and
 `test/SampleConnectorUnitTests/SampleConnectorUnitTests.csproj`:
 
 ```xml
-<PackageReference Include="Autodesk.DataExchange" Version="7.7.0-alpha" />
-<PackageReference Include="Autodesk.DataExchange.UI" Version="7.7.0-alpha" />
+<PackageReference Include="Autodesk.DataExchange" Version="7.7.0-alpha.1" />
+<PackageReference Include="Autodesk.DataExchange.UI" Version="7.7.0-alpha.1" />
 ```
 
 #### Step 2: Apply the Code Fixes
@@ -166,7 +166,7 @@ BuildSolution.bat
 
 ### 🎯 Summary of Changes
 
-| Aspect | SDK 7.6.0-beta | SDK 7.7.0-alpha |
+| Aspect | SDK 7.6.0-beta | SDK 7.7.0-alpha.1 |
 |--------|----------------|-----------------|
 | Storage persistence | `Storage.Save()` flushes everything | `Storage.Save(key)` / `Storage.Save(key, group)` |
 | OBJ download | `DownloadCompleteExchangeAsOBJ(exchangeId, collectionId, path, token)` | `DownloadCompleteExchangeAsOBJ(dataExchangeIdentifier, path, token)` |
@@ -188,7 +188,7 @@ After upgrading, confirm:
 ---
 
 **Migration Checklist:**
-- [x] Updated all package references to 7.7.0-alpha
+- [x] Updated all package references to 7.7.0-alpha.1
 - [x] Passed the storage key to `IStorage.Save`
 - [x] Passed `DataExchangeIdentifier` to `DownloadCompleteExchangeAsOBJ`
 - [x] Defined element types with `DefineType` before assigning them with `SetType`
@@ -323,7 +323,7 @@ with `DefineType` + `SetType` (see the `CreateElement` helper). Geometry lists a
 > created with `DefineType` first, and the `Category`/`Family` handles have to be threaded through to
 > preserve the hierarchy `ElementProperties` used to build. See
 > [Element types must be defined before they can be assigned](#-element-types-must-be-defined-before-they-can-be-assigned)
-> in the 7.7.0-alpha section for the full pattern.
+> in the 7.7.0-alpha.1 section for the full pattern.
 
 ### 🔧 Migration Steps
 

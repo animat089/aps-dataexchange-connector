@@ -3,7 +3,7 @@
 [![oAuth2](https://img.shields.io/badge/oAuth2-PKCE-green.svg)](http://developer.autodesk.com/)
 ![.NET](https://img.shields.io/badge/.NET-4.8%20%7C%208.0-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
-![SDK Version](https://img.shields.io/badge/DX%20SDK-7.7.0--alpha-blue.svg)
+![SDK Version](https://img.shields.io/badge/DX%20SDK-7.7.0--alpha.1-blue.svg)
 ![Level](https://img.shields.io/badge/Level-Intermediate-orange.svg)
 
 A comprehensive **WPF-based sample application** demonstrating how to integrate the Autodesk Data Exchange SDK's Connector UI components into a desktop application. This sample provides a complete reference implementation for building Windows applications that create and manage data exchanges.
