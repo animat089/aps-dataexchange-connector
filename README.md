@@ -3,7 +3,7 @@
 [![oAuth2](https://img.shields.io/badge/oAuth2-PKCE-green.svg)](http://developer.autodesk.com/)
 ![.NET](https://img.shields.io/badge/.NET-4.8%20%7C%208.0-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
-![SDK Version](https://img.shields.io/badge/DX%20SDK-7.7.0--alpha.1-blue.svg)
+![SDK Version](https://img.shields.io/badge/DX%20SDK-8.0.0-blue.svg)
 ![Level](https://img.shields.io/badge/Level-Intermediate-orange.svg)
 
 A comprehensive **WPF-based sample application** demonstrating how to integrate the Autodesk Data Exchange SDK's Connector UI components into a desktop application. This sample provides a complete reference implementation for building Windows applications that create and manage data exchanges.
@@ -125,11 +125,9 @@ git clone https://github.com/autodesk-platform-services/aps-dataexchange-connect
 cd aps-dataexchange-connector
 ```
 
-### 2. Install Data Exchange SDK
+### 2. Restore NuGet Packages
 
-Follow the [official SDK installation guide](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/developers_guide/installing_the_sdk/#procedure) to add the NuGet package source in Visual Studio.
-
-### 3. Restore NuGet Packages
+The SDK packages are published on [nuget.org](https://www.nuget.org/packages/Autodesk.DataExchange), so no additional package source is required.
 
 1. Open `src/SampleConnector.sln`
 2. Right-click on the solution → **Restore NuGet Packages**
@@ -240,9 +238,9 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 ### Official Documentation
 
--   [Autodesk Data Exchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/developers_guide/overview/)
+-   [Autodesk Data Exchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/overview/)
 -   [Autodesk Platform Services Developer Portal](https://aps.autodesk.com/)
--   [Data Exchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/reference/)
+-   [Data Exchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/sdk-reference/autodesk-dataexchange/)
 
 ### Related Samples
 
@@ -256,7 +254,7 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 ## License
 
-This sample code is part of the **Autodesk Data Exchange .NET SDK** beta program and is subject to the license terms covering the SDK. Please refer to the SDK license agreement for complete terms and conditions.
+This sample code is provided for use with the **Autodesk Data Exchange .NET SDK** and is subject to the Autodesk Platform Services Terms. The full license text is included in the NuGet package as `LICENSE.txt`.
 
 ## Support
 

@@ -3,33 +3,35 @@
 This guide documents SDK upgrades for the **Sample UI Connector**. The most recent
 migration is listed first; earlier migrations are preserved below for reference.
 
-- [🔄 Migration Guide: SDK 7.7.0-alpha.1 Upgrade](#-migration-guide-sdk-770-alpha1-upgrade) — **latest**
+- [🔄 Migration Guide: SDK 8.0.0 Upgrade](#-migration-guide-sdk-800-upgrade) — **latest**
 - [🔄 Migration Guide: SDK 7.6.0-beta Upgrade](#-migration-guide-sdk-760-beta-upgrade)
 - [🔄 Migration Guide: SDK 7.5.0 Upgrade](#-migration-guide-sdk-750-upgrade)
 - [🔄 Migration Guide: SDK 7.2.1-beta Upgrade](#-migration-guide-sdk-721-beta-upgrade)
 
 ---
 
-## 🔄 Migration Guide: SDK 7.7.0-alpha.1 Upgrade
+## 🔄 Migration Guide: SDK 8.0.0 Upgrade
 
-This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exchange SDK 7.7.0-alpha.1**.
+This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exchange SDK 8.0.0**.
 
 ### 📋 Overview of Changes
 
-- **SDK Version**: Upgraded to `Autodesk.DataExchange 7.7.0-alpha.1`
-- **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 7.7.0-alpha.1`
-- **Breaking Changes**: Yes — two signature changes plus one removal. `IStorage.Save()` now requires
-  the key of the entry being persisted, `IClient.DownloadCompleteExchangeAsOBJ` now takes a
-  `DataExchangeIdentifier` instead of separate exchange/collection id strings, and the
-  `ElementProperties` type is gone entirely.
+- **SDK Version**: Upgraded to `Autodesk.DataExchange 8.0.0`
+- **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 8.0.0`
+- **Breaking Changes**: Yes — two signature changes, one type removal, one assembly consolidation,
+  and the deletion of the APIs that were marked `[Obsolete]` in 7.6.0-beta. `IStorage.Save()` now
+  requires the key of the entry being persisted, `IClient.DownloadCompleteExchangeAsOBJ` now takes a
+  `DataExchangeIdentifier` instead of separate exchange/collection id strings, the
+  `ElementProperties` type is gone entirely, and `Autodesk.DataExchange.BaseModels.dll` no longer
+  ships as a standalone assembly.
 - **Build result**: 0 errors after fixes applied (`msbuild SampleConnector.sln -p:Configuration=Debug -p:Platform=x64`)
 
 ### 🚀 Key Dependency Updates
 
 | Package | Previous Version | New Version | Impact |
 |---------|------------------|-------------|---------|
-| `Autodesk.DataExchange` | `7.6.0-beta` | `7.7.0-alpha.1` | **Minor** - breaking changes |
-| `Autodesk.DataExchange.UI` | `7.6.0-beta` | `7.7.0-alpha.1` | **Minor** - breaking changes |
+| `Autodesk.DataExchange` | `7.6.0-beta` | `8.0.0` | **Major** - breaking changes |
+| `Autodesk.DataExchange.UI` | `7.6.0-beta` | `8.0.0` | **Major** - breaking changes |
 
 ### ⚠️ Breaking Changes
 
@@ -45,7 +47,7 @@ _sDKOptions.Storage.Add("LocalExchanges", localStorage);
 _sDKOptions.Storage.Save();
 ```
 
-**After (7.7.0-alpha.1):**
+**After (8.0.0):**
 ```csharp
 _sDKOptions.Storage.Add("LocalExchanges", localStorage);
 _sDKOptions.Storage.Save("LocalExchanges");
@@ -70,7 +72,7 @@ var objResult = this.Client.DownloadCompleteExchangeAsOBJ(
     cancellationToken);
 ```
 
-**After (7.7.0-alpha.1):**
+**After (8.0.0):**
 ```csharp
 var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, downloadPath, cancellationToken);
 ```
@@ -80,16 +82,74 @@ var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, do
 
 #### 3. `ElementProperties` and `AddElement(ElementProperties)` are removed
 
-Marked `[Obsolete]` in 7.6.0-beta, these are deleted outright in 7.7.0-alpha.1 — the `ElementProperties`
-type no longer exists in the assembly, so there is no fallback if the replacement APIs give trouble.
-This sample was already migrated during the 7.6.0-beta upgrade, so no code change was needed here.
+Marked `[Obsolete]` in 7.6.0-beta, these are deleted outright in 8.0.0 — the
+`ElementProperties` type no longer exists in the assembly, so there is no fallback if the replacement
+APIs give trouble. This sample was already migrated during the 7.6.0-beta upgrade, so no code change
+was needed here.
 
 **Migration Action:** Replace `AddElement(new ElementProperties(id, name, category, family, type))`
 with `AddElement(id, name)` followed by `Classify` and `DefineType`/`SetType` as described below.
 
+#### 4. `Autodesk.DataExchange.BaseModels.dll` is no longer a separate assembly
+
+The `Autodesk.DataExchange.UI` package used to ship a standalone
+`Autodesk.DataExchange.BaseModels.dll` alongside `Autodesk.DataExchange.UI.Bridge.dll`. In 8.0.0
+that assembly is gone, and the five types it contained are declared directly inside
+`Autodesk.DataExchange.UI.Bridge.dll`:
+
+- `Autodesk.DataExchange.BaseModels.BaseExchangeModel`
+- `Autodesk.DataExchange.BaseModels.BaseReadOnlyExchangeModel`
+- `Autodesk.DataExchange.BaseModels.BaseReadWriteExchangeModel`
+- `Autodesk.DataExchange.BaseModels.BaseWriteOnlyExchangeModel`
+- `Autodesk.DataExchange.UI.Helper.ExchangeUrl`
+
+Their namespaces are unchanged, so this is **source-compatible**: `using Autodesk.DataExchange.BaseModels;`
+and `class CustomReadWriteModel : BaseReadWriteExchangeModel` still compile untouched, and no code
+change was needed in this sample.
+
+**Migration Action:** Nothing to do if you consume the SDK through `PackageReference`, as this sample
+does — NuGet stops copying the removed file automatically. You do need to act if either of the
+following applies:
+
+- You reference `Autodesk.DataExchange.BaseModels.dll` through an explicit `<Reference>` with a
+  `HintPath`, or list it in an installer, packaging script, or `app.config` binding redirect. Those
+  references now point at a file that does not exist and must be removed.
+- You are upgrading in place over an earlier build output. A stale
+  `Autodesk.DataExchange.BaseModels.dll` left in `bin\` will still satisfy the loader and mask the
+  change, so clean the output directory (or run `msbuild -t:Rebuild`) to be sure you are testing
+  against 8.0.0 alone.
+
+#### 5. APIs marked `[Obsolete]` in 7.6.0-beta are deleted
+
+7.6.0-beta obsoleted a number of members and kept them functional. 8.0.0 removes them, so any
+`CS0618` warning that was suppressed or ignored during the 7.6.0-beta upgrade is now a `CS0117`/
+`CS1061` compile error. The removals are:
+
+| Removed in 8.0.0 | Replacement |
+|------------------|-------------|
+| `IClient.RetrieveLatestExchangeDataAsync(...)` | `RetrieveLatestExchangeAsync(model, cancellationToken)` |
+| `IElement.Id`, `Element.Id`, `IDesign.Id`, `IDesign.ID` | `UniqueId` (or `SourceId` where a source-scoped id is wanted) |
+| `IElementDataModel.DeleteElement(string)`, `DeleteElementsById(string)` | `DeleteElementByUniqueId(element.UniqueId)` |
+| `IElementDataModel.GetElementById(string)`, `GetElementsById(string)` | Query `Elements` by `UniqueId`/`SourceId` |
+| `IElementDataModel.GetDesigns()`, `GetDesignsById(...)`, `GetDesignInstancesById(...)`, `InstantiateDesignById(...)`, `CreateDesignRef(...)` | `UniqueId`-based design APIs |
+| `ElementDataModel.AddElement(ElementProperties, ...)` and the `AddElement(string, string, Element, ...)` overload | `AddElement(id, name)` plus `Classify`/`DefineType`/`SetType` |
+| `IClient.GetCollectionAsync(...)`, `GetExchangeDetailsAsync(...)` | Current `IClient` exchange/collection APIs |
+| `ExchangeCreateRequestACC.ACCProjectURN` | `ProjectUrn` |
+
+A few members that were **not** obsoleted in 7.6.0-beta were also removed, so they are worth checking
+if your connector uses them: the `IStorage.Add(string key, object value, string group, bool markForUpdate)`
+overload, `IExchange.CopyExchangeLinkAsync(...)`, `IExchange.GetExchangeFilterView()`,
+`IExchangeReader.OnGetLatestExchangeDataAction(...)`, the `Units`-taking `ElementDataModel.CreateFileGeometry`
+overloads, `IElementGeometry.Id`, and the ADP analytics registration entry points
+(`SDKOptions.RegisterAdpAnalytics` and `AdpAnalyticsServiceCollectionExtensions.AddAdpAnalytics`).
+
+**Migration Action:** None was needed in this sample — it moved off these APIs during the 7.6.0-beta
+upgrade, which is exactly why that step matters. If you skipped it, do it before upgrading to 8.0.0,
+because the compiler no longer offers an obsolete-but-working path.
+
 ### ⚠️ Element types must be defined before they can be assigned
 
-Not a 7.7.0-alpha.1 change — this behaviour is identical in 7.6.0-beta — but it is the one that most
+Not an 8.0.0 change — this behaviour is identical in 7.6.0-beta — but it is the one that most
 easily breaks a connector migrating off `ElementProperties`, so it is worth spelling out.
 
 `SetType(IElement, string name, IClassification under)` is **lookup-only**. It resolves an existing
@@ -138,8 +198,8 @@ Update the version numbers in `src/SampleConnector.csproj` and
 `test/SampleConnectorUnitTests/SampleConnectorUnitTests.csproj`:
 
 ```xml
-<PackageReference Include="Autodesk.DataExchange" Version="7.7.0-alpha.1" />
-<PackageReference Include="Autodesk.DataExchange.UI" Version="7.7.0-alpha.1" />
+<PackageReference Include="Autodesk.DataExchange" Version="8.0.0" />
+<PackageReference Include="Autodesk.DataExchange.UI" Version="8.0.0" />
 ```
 
 #### Step 2: Apply the Code Fixes
@@ -166,18 +226,22 @@ BuildSolution.bat
 
 ### 🎯 Summary of Changes
 
-| Aspect | SDK 7.6.0-beta | SDK 7.7.0-alpha.1 |
+| Aspect | SDK 7.6.0-beta | SDK 8.0.0 |
 |--------|----------------|-----------------|
 | Storage persistence | `Storage.Save()` flushes everything | `Storage.Save(key)` / `Storage.Save(key, group)` |
 | OBJ download | `DownloadCompleteExchangeAsOBJ(exchangeId, collectionId, path, token)` | `DownloadCompleteExchangeAsOBJ(dataExchangeIdentifier, path, token)` |
 | `ElementProperties` | `[Obsolete]`, still present | Removed from the assembly |
-| Element typing | `DefineType` + `SetType(handle)` (`SetType(name)` alone throws) | Unchanged |
+| Base exchange models | `Autodesk.DataExchange.BaseModels.dll` | Merged into `Autodesk.DataExchange.UI.Bridge.dll` (same namespaces) |
+| Element typing | `SetType(name)` alone throws; `DefineType` + `SetType(handle)` required | Unchanged |
 
 ### 🧪 Testing Your Migration
 
 After upgrading, confirm:
 
 - ✅ `msbuild SampleConnector.sln -p:Configuration=Debug -p:Platform=x64` builds with 0 errors
+- ✅ The build still succeeds from a clean output directory (`-t:Rebuild`, or delete `bin`/`obj`
+  first) — this is what proves no stale `Autodesk.DataExchange.BaseModels.dll` is propping the build
+  up
 - ✅ The MSTest unit test suite passes (`vstest.console.exe` against `SampleConnectorUnitTests.dll`)
 - ✅ Cached exchanges still survive a connector restart (storage save/load round-trip)
 - ✅ Downloading an exchange produces both the STEP file and the OBJ output
@@ -188,12 +252,13 @@ After upgrading, confirm:
 ---
 
 **Migration Checklist:**
-- [x] Updated all package references to 7.7.0-alpha.1
+- [x] Updated all package references to 8.0.0
 - [x] Passed the storage key to `IStorage.Save`
 - [x] Passed `DataExchangeIdentifier` to `DownloadCompleteExchangeAsOBJ`
 - [x] Defined element types with `DefineType` before assigning them with `SetType`
 - [x] Reused the loaded `ElementDataModel` when updating an existing exchange
-- [x] Restored NuGet packages and rebuilt the solution (0 errors)
+- [x] Confirmed no reference to the removed `Autodesk.DataExchange.BaseModels.dll` remains
+- [x] Restored NuGet packages and rebuilt the solution (0 errors, verified with `-t:Rebuild`)
 - [x] Ran the MSTest unit test suite (4/4 passed)
 - [ ] Tested create / update / download workflows end to end
 
@@ -323,7 +388,7 @@ with `DefineType` + `SetType` (see the `CreateElement` helper). Geometry lists a
 > created with `DefineType` first, and the `Category`/`Family` handles have to be threaded through to
 > preserve the hierarchy `ElementProperties` used to build. See
 > [Element types must be defined before they can be assigned](#-element-types-must-be-defined-before-they-can-be-assigned)
-> in the 7.7.0-alpha.1 section for the full pattern.
+> in the 8.0.0 section for the full pattern.
 
 ### 🔧 Migration Steps
 
