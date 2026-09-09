@@ -274,10 +274,10 @@ After upgrading, confirm:
 
 ### 📚 Additional Resources
 
-- [APS DataExchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk/v1/developers_guide/overview/)
-- [APS DataExchange Release Notes](https://aps.autodesk.com/en/docs/dx-sdk/v1/developers_guide/release_notes/)
+- [APS DataExchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/overview/)
+- [APS DataExchange Release Notes](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/changelog/v1changelog-800/)
 - [Autodesk Platform Services Developer Portal](https://aps.autodesk.com/)
-- [DataExchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk/v1/reference/)
+- [DataExchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/sdk-reference/autodesk-dataexchange/)
 - [Sample Code Repository](https://github.com/autodesk-platform-services/aps-dataexchange-connector)
 
 ---
