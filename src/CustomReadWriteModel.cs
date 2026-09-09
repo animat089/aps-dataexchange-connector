@@ -170,11 +170,7 @@ namespace SampleConnector
                         this._sDKOptions?.Logger?.Information($"STEP downloaded to: {stepResult.Value}");
                     }
 
-                    var objResult = this.Client.DownloadCompleteExchangeAsOBJ(
-                        exchangeIdentifier.ExchangeId,
-                        exchangeIdentifier.CollectionId,
-                        downloadPath,
-                        cancellationToken);
+                    var objResult = this.Client.DownloadCompleteExchangeAsOBJ(exchangeIdentifier, downloadPath, cancellationToken);
 
                     if (objResult.IsFailed)
                     {
@@ -271,7 +267,7 @@ namespace SampleConnector
             }
 
             _sDKOptions.Storage.Add("LocalExchanges", localStorage);
-            _sDKOptions.Storage.Save();
+            _sDKOptions.Storage.Save("LocalExchanges");
         }
 
         public override List<DataExchange> GetCachedExchanges()
@@ -382,8 +378,8 @@ namespace SampleConnector
 
         private async Task<ElementDataModel> UpdateExistingExchangeData()
         {
-            // Create wrapper on existing exchange data
-            var elementDataModel = ElementDataModel.Create(Client);
+            // Mutate the loaded model in place (ExchangeData wrapper is internal to the SDK)
+            var elementDataModel = this.currentElementDataModel;
 
             // Demonstrate element deletion (if elements exist)
             this.DeleteSampleElement(elementDataModel);

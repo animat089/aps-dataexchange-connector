@@ -1,9 +1,9 @@
 # Autodesk Data Exchange Connector UI Sample
 
 [![oAuth2](https://img.shields.io/badge/oAuth2-PKCE-green.svg)](http://developer.autodesk.com/)
-![.NET](https://img.shields.io/badge/.NET-4.8%20%7C%208.0-blue.svg)
+![.NET](https://img.shields.io/badge/.NET%20Framework-4.8-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
-![SDK Version](https://img.shields.io/badge/DX%20SDK-7.6.0--beta-blue.svg)
+![SDK Version](https://img.shields.io/badge/DX%20SDK-8.0.0-blue.svg)
 ![Level](https://img.shields.io/badge/Level-Intermediate-orange.svg)
 
 A comprehensive **WPF-based sample application** demonstrating how to integrate the Autodesk Data Exchange SDK's Connector UI components into a desktop application. This sample provides a complete reference implementation for building Windows applications that create and manage data exchanges.
@@ -12,19 +12,17 @@ A comprehensive **WPF-based sample application** demonstrating how to integrate 
 
 -   [Overview](#overview)
 -   [Features](#features)
--   [Architecture](#architecture)
 -   [Screenshots](#screenshots)
 -   [Prerequisites](#prerequisites)
 -   [Installation](#installation)
 -   [Configuration](#configuration)
 -   [Usage](#usage)
--   [Project Structure](#project-structure)
 -   [Key Components](#key-components)
--   [Sample Data](#sample-data)
 -   [Testing](#testing)
 -   [API Reference](#api-reference)
 -   [Further Reading](#further-reading)
 -   [License](#license)
+-   [Support](#support)
 
 ## Overview
 
@@ -33,7 +31,7 @@ This sample application demonstrates the integration of the **Autodesk Data Exch
 -   Embed the Data Exchange Connector UI within your application
 -   Implement PKCE OAuth2 authentication with Autodesk Platform Services
 -   Create and manage data exchanges programmatically
--   Handle multiple 3D file formats (STEP, IFC, OBJ, Mesh API)
+-   Handle multiple 3D file formats (STEP, IFC, OBJ, USD, Mesh API)
 -   Provide real-time progress feedback and notifications
 -   Implement custom read/write models for exchange operations
 
@@ -41,17 +39,17 @@ This sample application demonstrates the integration of the **Autodesk Data Exch
 
 ## Features
 
-### 🎨 **Connector UI Integration**
+### Connector UI Integration
 
 -   Integrate Data Exchange Connector UI within your WPF or WinForm application
 -   Real-time notifications and progress tracking
 -   Integrated 3D model preview for exchange selection
 
-### 🔐 **Authentication & Security**
+### Authentication & Security
 
 -   PKCE OAuth2 implementation with APS (Autodesk Platform Services)
 
-### 🔄 **Exchange Management**
+### Exchange Management
 
 -   Create new exchanges with custom metadata
 -   Update existing exchanges with new revisions
@@ -96,9 +94,10 @@ Familiar search and selection interface that mirrors the user experience from Au
 
 ### Development Environment
 
--   **Visual Studio 2019** or later (recommended: Visual Studio 2022)
--   **.NET Framework 4.8** or **.NET 8.0** SDK
--   **Windows 10** or later (x64 architecture)
+-   **Visual Studio 2022** or later
+-   **.NET Framework 4.8** — this sample targets .NET Framework 4.8. The SDK itself also
+    supports .NET 8 and .NET 10; see [Installing the SDK](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/getting_started/installing_the_sdk/)
+-   **Windows 10** or later, x64
 
 ### Autodesk Platform Services
 
@@ -109,7 +108,11 @@ Familiar search and selection interface that mirrors the user experience from Au
     - Data Management API
     - Data Exchange API
 
-3. **Autodesk Construction Cloud**: Active ACC account to store created exchange or load exchanges from
+3. **Account Access**: Add your application's client ID to your BIM 360 or Forma account so
+   the sample can reach your projects.
+
+4. **Forma** (formerly Autodesk Construction Cloud): an active account to store created
+   exchanges in, or to load exchanges from
 
 ### Required Credentials
 
@@ -125,15 +128,39 @@ git clone https://github.com/autodesk-platform-services/aps-dataexchange-connect
 cd aps-dataexchange-connector
 ```
 
-### 2. Install Data Exchange SDK
+### 2. Restore NuGet Packages
 
-Follow the [official SDK installation guide](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/developers_guide/installing_the_sdk/#procedure) to add the NuGet package source in Visual Studio.
-
-### 3. Restore NuGet Packages
+The SDK ships as two packages on nuget.org, [`Autodesk.DataExchange`](https://www.nuget.org/packages/Autodesk.DataExchange)
+and [`Autodesk.DataExchange.UI`](https://www.nuget.org/packages/Autodesk.DataExchange.UI), and both
+are already declared in `src/SampleConnector.csproj`. No additional package source is required —
+a restore pulls them and their transitive dependencies.
 
 1. Open `src/SampleConnector.sln`
 2. Right-click on the solution → **Restore NuGet Packages**
-3. Build the solution (`Ctrl+Shift+B`)
+3. Confirm the solution platform is set to **x64**. The SDK and its support libraries are
+   64-bit, and Visual Studio defaults new C# projects to **Any CPU**, which leads to unstable
+   runtime behavior rather than a clean build failure.
+4. Build the solution (`Ctrl+Shift+B`)
+
+To restore and build from the command line instead:
+
+```bash
+msbuild -t:restore src/SampleConnector.sln
+msbuild src/SampleConnector.sln -p:Configuration=Debug -p:Platform=x64
+```
+
+### Adding the SDK to your own project
+
+To install the SDK into your own connector rather than running this sample:
+
+```bash
+dotnet add package Autodesk.DataExchange
+dotnet add package Autodesk.DataExchange.UI
+```
+
+These are the only two Data Exchange packages available to third-party connectors, and
+`Autodesk.DataExchange.UI` is optional if you are not using the Connector UI. See
+[Installing the SDK](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/getting_started/installing_the_sdk/).
 
 ## Configuration
 
@@ -159,13 +186,13 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 | Parameter                | Description                     | Required |
 | ------------------------ | ------------------------------- | -------- |
-| `AuthClientId`           | APS application Client ID       | ✅ Yes   |
-| `AuthCallback`           | OAuth2 redirect URI             | ✅ Yes   |
-| `ConnectorName`          | Display name for your connector | ✅ Yes   |
-| `ConnectorVersion`       | Version of your connector       | ✅ Yes   |
-| `HostApplicationName`    | Name of your host application   | ✅ Yes   |
-| `HostApplicationVersion` | Version of your host app        | ✅ Yes   |
-| `LogLevel`               | Debug, Info, Warning, Error     | ❌ No    |
+| `AuthClientId`           | APS application Client ID       | Yes      |
+| `AuthCallback`           | OAuth2 redirect URI             | Yes      |
+| `ConnectorName`          | Display name for your connector | Yes      |
+| `ConnectorVersion`       | Version of your connector       | Yes      |
+| `HostApplicationName`    | Name of your host application   | Yes      |
+| `HostApplicationVersion` | Version of your host app        | Yes      |
+| `LogLevel`               | Debug, Info, Warning, Error     | No       |
 
 ## Usage
 
@@ -180,11 +207,11 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 1. Click **Create Exchange** in the UI
 2. Programmatically add metadata and properties (in your custom exchange model)
-3. Publish to Autodesk Construction Cloud
+3. Publish to Forma
 
 ### 3. Manage Exchanges
 
--   **View Exchanges**: Browse existing exchanges from your ACC projects
+-   **View Exchanges**: Browse existing exchanges from your Forma projects
 -   **Update Exchanges**: Add new revisions to existing exchanges
 -   **Download**: Retrieve exchange data in various formats
 -   **Preview**: View 3D models directly in the UI
@@ -240,9 +267,12 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 ### Official Documentation
 
--   [Autodesk Data Exchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/developers_guide/overview/)
+-   [Autodesk Data Exchange SDK Documentation](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/overview/)
+-   [Installing the SDK](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/developers_guide/getting_started/installing_the_sdk/)
+-   [8.0.0 Migration Guide](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/migration/migration-guide/)
+-   [8.0.0 Changelog](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/changelog/v1changelog-800/)
 -   [Autodesk Platform Services Developer Portal](https://aps.autodesk.com/)
--   [Data Exchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk-beta/v1/reference/)
+-   [Data Exchange API Reference](https://aps.autodesk.com/en/docs/dx-sdk/v8.0.0/sdk-reference/autodesk-dataexchange/)
 
 ### Related Samples
 
@@ -256,7 +286,7 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 ## License
 
-This sample code is part of the **Autodesk Data Exchange .NET SDK** beta program and is subject to the license terms covering the SDK. Please refer to the SDK license agreement for complete terms and conditions.
+This sample code is provided for use with the **Autodesk Data Exchange .NET SDK** and is subject to the Autodesk Platform Services Terms. The full license text is included in the NuGet package as `LICENSE.txt`.
 
 ## Support
 
