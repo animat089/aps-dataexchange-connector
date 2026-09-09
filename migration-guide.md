@@ -18,7 +18,7 @@ This section documents the migration from SDK 7.6.0-beta to **Autodesk Data Exch
 
 - **SDK Version**: Upgraded to `Autodesk.DataExchange 8.0.0`
 - **UI SDK Version**: Upgraded to `Autodesk.DataExchange.UI 8.0.0`
-- **Breaking Changes**: Yes — two signature changes, one type removal, one assembly consolidation,
+- **Breaking Changes**: Yes — signature changes, one type removal, one assembly consolidation,
   and the deletion of the APIs that were marked `[Obsolete]` in 7.6.0-beta. `IStorage.Save()` now
   requires the key of the entry being persisted, `IClient.DownloadCompleteExchangeAsOBJ` now takes a
   `DataExchangeIdentifier` instead of separate exchange/collection id strings, the
@@ -59,8 +59,9 @@ key is always in scope — see `SampleHostWindow.Destroy`.
 
 #### 2. `IClient.DownloadCompleteExchangeAsOBJ` takes a `DataExchangeIdentifier`
 
-The `(string exchangeId, string collectionId, ...)` overload was removed. All four
-`DownloadCompleteExchangeAs*` methods (OBJ, STEP, IFC, USD) now share one shape:
+The `(string exchangeId, string collectionId, ...)` overload was removed. Only `OBJ` was affected:
+`STEP`, `IFC`, and `USD` already took a `DataExchangeIdentifier` in 7.6.0-beta, so as of 8.0.0 all
+four `DownloadCompleteExchangeAs*` methods share one shape:
 `(DataExchangeIdentifier dataExchangeIdentifier, string path = null, CancellationToken cancellationToken = default)`.
 
 **Before (7.6.0-beta):**
@@ -133,15 +134,24 @@ following applies:
 | `IElementDataModel.GetElementById(string)`, `GetElementsById(string)` | Query `Elements` by `UniqueId`/`SourceId` |
 | `IElementDataModel.GetDesigns()`, `GetDesignsById(...)`, `GetDesignInstancesById(...)`, `InstantiateDesignById(...)`, `CreateDesignRef(...)` | `UniqueId`-based design APIs |
 | `ElementDataModel.AddElement(ElementProperties, ...)` and the `AddElement(string, string, Element, ...)` overload | `AddElement(id, name)` plus `Classify`/`DefineType`/`SetType` |
-| `IClient.GetCollectionAsync(...)`, `GetExchangeDetailsAsync(...)` | Current `IClient` exchange/collection APIs |
+| `IClient.GetCollectionAsync(string hubId, string projectId)` | Current `IClient` collection APIs |
+| `IClient.GetExchangeDetailsAsync(string exchangeUrn)` — the single-argument overload only | `GetExchangeDetailsAsync(collectionId, exchangeUrn)` or `GetExchangeDetailsAsync(dataExchangeIdentifier)`, both of which remain |
 | `ExchangeCreateRequestACC.ACCProjectURN` | `ProjectUrn` |
 
-A few members that were **not** obsoleted in 7.6.0-beta were also removed, so they are worth checking
-if your connector uses them: the `IStorage.Add(string key, object value, string group, bool markForUpdate)`
-overload, `IExchange.CopyExchangeLinkAsync(...)`, `IExchange.GetExchangeFilterView()`,
-`IExchangeReader.OnGetLatestExchangeDataAction(...)`, the `Units`-taking `ElementDataModel.CreateFileGeometry`
-overloads, `IElementGeometry.Id`, and the ADP analytics registration entry points
-(`SDKOptions.RegisterAdpAnalytics` and `AdpAnalyticsServiceCollectionExtensions.AddAdpAnalytics`).
+A few members that were **not** obsoleted in 7.6.0-beta were also removed outright:
+`IExchange.CopyExchangeLinkAsync(ExchangeItem)` (note that `IConnectorAPI.CopyExchangeLinkAsync(string)`
+is unaffected), `IExchange.GetExchangeFilterView()`, `IElementGeometry.Id`, and the ADP analytics
+registration entry points (`SDKOptions.RegisterAdpAnalytics` and
+`AdpAnalyticsServiceCollectionExtensions.AddAdpAnalytics`).
+
+Three more members changed shape rather than disappearing. Source that relied on their old signatures
+still needs a look, but the methods themselves are still there:
+
+| Member | 7.6.0-beta | 8.0.0 |
+|--------|------------|-------|
+| `IStorage.Add` | `Add(key, value, group, bool markForUpdate = false)` | `Add(key, value, group)` — `markForUpdate` dropped; three-argument calls are unaffected |
+| `IExchangeReader.OnGetLatestExchangeDataAction` | `(ExchangeItem, CancellationToken = default)` | `(ExchangeItem, IElementDataModel syncedModel = null, CancellationToken = default)` — the inserted second parameter breaks positional two-argument calls |
+| `ElementDataModel.CreateFileGeometry` | `(filePath \| MemoryStream, GeometryFormat, RenderStyle, Units)` | Same overloads plus a trailing optional `string sourceId = null`; existing calls still compile |
 
 **Migration Action:** None was needed in this sample — it moved off these APIs during the 7.6.0-beta
 upgrade, which is exactly why that step matters. If you skipped it, do it before upgrading to 8.0.0,
