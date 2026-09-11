@@ -286,7 +286,7 @@ Edit `src/App.Debug.config` (for Debug builds) or `src/App.Release.config` (for 
 
 ## License
 
-This sample code is provided for use with the **Autodesk Data Exchange .NET SDK** and is subject to the Autodesk Platform Services Terms. The full license text is included in the NuGet package as `LICENSE.txt`.
+This sample code is provided for use with the **Autodesk Data Exchange .NET SDK** and is subject to the [Autodesk Platform Services Terms](https://www.autodesk.com/company/legal-notices-trademarks/terms-of-service-autodesk360-web-services/forge-platform-web-services-api-terms-of-service).
 
 ## Support
 
